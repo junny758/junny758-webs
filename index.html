@@ -1176,7 +1176,8 @@
         } else if (role === 'admin') {
             const id = document.getElementById('teacherIdLogin').value.trim();
             const pwd = document.getElementById('loginPassword').value;
-            if (id === 'admin' && pwd === '123456') { currentUserRole = 'admin'; currentUser = { id: 'admin', name: '超级管理员' }; }
+            const admin = userDatabase.admin.find(a => a.id === id && a.password === pwd);
+            if (admin) { currentUserRole = 'admin'; currentUser = admin; }
             else { alert('管理员账号或密码错误'); return; }
         }
         closeModal('login');
@@ -1426,9 +1427,15 @@
             if (t && t.password !== old) { alert('当前密码错误'); return; }
             t.password = newp;
         } else if (currentUserRole === 'admin') {
-            if (currentUser.password !== old) { alert('当前密码错误'); return; }
-            currentUser.password = newp;
+            let admin = userDatabase.admin.find(a => a.id === currentUser.id);
+            if (admin && admin.password !== old) { alert('当前密码错误'); return; }
+            admin.password = newp;
+            currentUser.password = newp; // 更新currentUser中的密码
         }
+        // 保存到localStorage
+        localStorage.setItem('userDatabase_students', JSON.stringify(userDatabase.students));
+        localStorage.setItem('userDatabase_teachers', JSON.stringify(userDatabase.teachers));
+        localStorage.setItem('userDatabase_admin', JSON.stringify(userDatabase.admin));
         alert('密码修改成功');
         closeModal('changePassword');
     }
