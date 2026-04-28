@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>云南国土资源职业学院商务信息学院 · 学生离校请假审批AI助手</title>
+    <title>学生离校请假审批AI助手</title>
     <style>
         * {
             margin: 0;
@@ -238,8 +238,48 @@
             border-radius: 8px;
             border-left: 4px solid #667eea;
             font-size: 0.95em;
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
+        }
+        .recognized-text textarea {
+            width: 100%;
+            min-height: 120px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 12px;
+            background: white;
+            resize: vertical;
+            font-size: 0.95em;
+            font-family: 'Microsoft YaHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .recognized-text textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: inset 0 1px 3px rgba(102, 126, 234, 0.3);
+        }
+        .edit-text-btn {
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .edit-text-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .recognized-text p {
+            margin: 8px 0 0 0;
+            font-size: 0.8em;
+            color: #666;
+            line-height: 1.4;
         }
 
         .btn {
@@ -394,6 +434,8 @@
         <div class="user-info" id="userInfo">
             <span id="userRole">访客</span>
             <button class="btn" id="loginBtnHeader">登录</button>
+            <button class="btn" id="closePageBtn" style="background:#dc3545; margin-left: 10px;">🔒 关闭网页</button>
+            <div style="margin-top: 5px; font-weight: bold; color: red; font-size: 12px;">申请成功后请务必关闭网页！</div>
         </div>
     </div>
 
@@ -435,7 +477,7 @@
         <div class="card" style="text-align: center;">
             <button class="btn" id="submitBtn">✨ 提交审批</button>
             <div class="batch-actions">
-                <button class="btn" id="batchAddStudentBtn" style="background:#4c6ef5;">📚 批量添加学生</button>
+                <button class="btn" id="batchAddStudentBtn" style="background:#4c6ef5; display: none;">📚 批量添加学生</button>
             </div>
         </div>
     </div>
@@ -469,6 +511,10 @@
                     <label for="studentIdLogin" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333; font-size: 16px;">学号</label>
                     <input type="text" id="studentIdLogin" placeholder="请输入学号" style="width: 100%; padding: 12px; border: 2px solid #667eea; border-radius: 8px; font-size: 16px;">
                 </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="studentPasswordLogin" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333; font-size: 16px;">密码</label>
+                    <input type="password" id="studentPasswordLogin" placeholder="请输入密码（初始密码为学号）" style="width: 100%; padding: 12px; border: 2px solid #667eea; border-radius: 8px; font-size: 16px;">
+                </div>
             </div>
             
             <div id="teacherLoginForm" style="display:none; margin-top: 20px;">
@@ -485,9 +531,8 @@
             <div style="margin-bottom: 25px; padding: 15px; background-color: #f0f2ff; border-radius: 8px; border-left: 4px solid #667eea;">
                 <p style="font-size: 14px; color: #333; margin: 0;">
                     <strong>登录提示：</strong><br>
-                    学生：姓名 + 学号<br>
-                    教师/班主任：工号 + 密码（初始密码：123456）<br>
-                    超级管理员：账号 admin + 密码 123456
+                    学生：输入姓名+学号+密码（初始密码为学号）<br>
+                    教师/班主任：工号＋密码
                 </p>
             </div>
             
@@ -661,18 +706,58 @@
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
     // ---------- 学生数据库（主数据）----------
     let studentDatabase = JSON.parse(localStorage.getItem('studentDatabase')) || [
-        { id: '2026001', name: '张三', parentPhone: '', remark: '', photo: '', status: '在校' },
-        { id: '2026002', name: '李四', parentPhone: '', remark: '', photo: '', status: '请假申请中' },
-        { id: '2026003', name: '王五', parentPhone: '', remark: '', photo: '', status: '在校' },
-        { id: '2026004', name: '赵六', parentPhone: '', remark: '', photo: '', status: '校外实习' },
-        { id: '2026005', name: '孙七', parentPhone: '', remark: '', photo: '', status: '在校' }
+        { id: '25C01060054', name: '李亮', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060093', name: '刘晶', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060017', name: '臧永碟', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25Z01060127', name: '彭丽', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060028', name: '袁双荣', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060148', name: '曾鑫', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25Z01060147', name: '吴光满', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25Z01060134', name: '锡顺永', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060008', name: '朱梓琳', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060074', name: '柴姝凝', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060047', name: '牛彩瑞', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060072', name: '刘路桥', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060157', name: '罗浩', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060113', name: '张锦晨', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060084', name: '戴伟', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25Z01060152', name: '杨梦婷', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060104', name: '吴柳慧', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25Z01060143', name: '李芊芊', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25Z01060119', name: '马艳英', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060014', name: '李艳', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060032', name: '王绍娟', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060109', name: '刀美萍', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060101', name: '邹佳莉', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060132', name: '周浩新', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060036', name: '杨云娟', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060094', name: '李天宇', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25Z01060156', name: '杨进凯', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060038', name: '杨红建', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25Z01060141', name: '陈秋杰', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060002', name: '祁淑静', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060024', name: '白自旭', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25Z01060115', name: '王丽萍', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060057', name: '张梦娇', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060011', name: '田梦然', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060060', name: '杨天昊', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060040', name: '熊雅洁', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060025', name: '康祖艳', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060121', name: '寸待兴', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25C01060065', name: '谷金艳', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060078', name: '赵永清', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060097', name: '曹梦迪', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '25T01060126', name: '赵俊源', parentPhone: '', remark: '', photo: '', status: '在校' },
+        { id: '23D0208130', name: '刘艳东', parentPhone: '', remark: '', photo: '', status: '在校' }
     ];
     let userDatabase = {
-        students: JSON.parse(localStorage.getItem('userDatabase_students')) || studentDatabase.map(s => ({ id: s.id, name: s.name, password: '123456' })),
-        teachers: JSON.parse(localStorage.getItem('userDatabase_teachers')) || [{ id: 'T001', name: '张老师', role: 'headTeacher', password: '123456' }, { id: 'T002', name: '李老师', role: 'teacher', password: '123456' }],
+        students: JSON.parse(localStorage.getItem('userDatabase_students')) || studentDatabase.map(s => ({ id: s.id, name: s.name, password: s.id })),
+        teachers: JSON.parse(localStorage.getItem('userDatabase_teachers')) || [{ id: 'super123', name: '何老师', role: 'headTeacher', password: '123456' }, { id: 'T002', name: '李老师', role: 'teacher', password: '123456' }],
         admin: JSON.parse(localStorage.getItem('userDatabase_admin')) || [{ id: 'admin', name: '超级管理员', role: 'admin', password: '123456' }]
     };
 
@@ -684,13 +769,7 @@
     let leaveImageData = '';  // 保存请假截图的dataURL
     let parentImageData = ''; // 保存家长短信截图的dataURL
     
-    // 飞书API配置
-    const feishuConfig = {
-        appId: 'cli_a96638762a395cb0', // 用户提供的App ID
-        appSecret: 'TfcrLfNepMG6IVYJtJDDlgKJjcuipeMc', // 用户提供的App Secret
-        apiBaseUrl: 'https://open.feishu.cn/open-apis'
-    };
-    let feishuAccessToken = '';
+
 
     // 辅助函数
     function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
@@ -730,7 +809,8 @@
 
     // 同步登录库
     function syncUserDatabase() {
-        userDatabase.students = studentDatabase.map(s => ({ id: s.id, name: s.name, password: '123456' }));
+        // 同步学生数据库，密码设置为学号
+        userDatabase.students = studentDatabase.map(s => ({ id: s.id, name: s.name, password: s.id }));
         // 保存数据到localStorage
         localStorage.setItem('studentDatabase', JSON.stringify(studentDatabase));
         localStorage.setItem('userDatabase_students', JSON.stringify(userDatabase.students));
@@ -805,44 +885,209 @@
     }
     
     // 保存审批历史记录
-    async function saveApprovalHistory(studentName, approvalResult, leaveImageData, parentImageData) {
-        // 创建历史记录对象
-        const historyRecord = {
-            studentName: studentName,
-            approvalResult: approvalResult,
-            leaveImageData: leaveImageData,
-            parentImageData: parentImageData,
-            timestamp: new Date().toISOString()
-        };
-        
-        // 获取现有历史记录
-        const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
-        
-        // 添加新记录
-        history.push(historyRecord);
-        
-        // 保存到localStorage
-        localStorage.setItem('approvalHistory', JSON.stringify(history));
-        
-        // 生成HTML内容
-        const htmlContent = generateHistoryHTML(historyRecord);
-        
-        // 下载文件
-        downloadHistoryRecord(htmlContent, historyRecord);
-        
-        // 上传到飞书
+    function saveApprovalHistory(studentName, approvalResult, leaveImageData, parentImageData) {
         try {
-            showLoading(true);
-            const fileName = `请假审批记录_${studentName}_${new Date(historyRecord.timestamp).toISOString().slice(0, 10)}.html`;
-            const fileToken = await uploadFileToFeishu(htmlContent, fileName);
-            console.log('文件上传到飞书成功，file_token:', fileToken);
-            alert('请假审批记录已成功保存到飞书云文档！');
+            // 创建历史记录对象（不包含图片数据，只保存必要信息）
+            const historyRecord = {
+                studentName: studentName,
+                approvalResult: approvalResult,
+                timestamp: new Date().toISOString()
+            };
+            
+            // 获取现有历史记录
+            let history = [];
+            try {
+                const existingHistory = localStorage.getItem('approvalHistory');
+                if (existingHistory) {
+                    history = JSON.parse(existingHistory);
+                }
+            } catch (parseError) {
+                // 如果解析失败，创建新的历史记录数组
+                history = [];
+            }
+            
+            // 添加新记录
+            history.push(historyRecord);
+            
+            // 限制历史记录数量，只保留最近100条
+            if (history.length > 100) {
+                history = history.slice(-100);
+            }
+            
+            // 保存到localStorage
+            localStorage.setItem('approvalHistory', JSON.stringify(history));
+            
+            // 生成并下载PDF文件
+            generatePDF({
+                studentName: studentName,
+                approvalResult: approvalResult,
+                leaveImageData: leaveImageData,
+                parentImageData: parentImageData,
+                timestamp: new Date().toISOString()
+            });
         } catch (error) {
-            console.error('上传到飞书失败:', error);
-            alert('保存到飞书云文档失败，请检查网络连接或飞书API配置');
-        } finally {
-            showLoading(false);
+            console.error('保存审批历史记录失败:', error);
+            throw error;
         }
+    }
+    
+    // 生成PDF文件
+    function generatePDF(record) {
+        try {
+            // 创建一个临时的HTML元素来生成PDF内容
+            const tempDiv = document.createElement('div');
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.left = '-9999px';
+            tempDiv.style.width = '700px'; // 调整宽度，确保内容在一页内显示
+            tempDiv.style.backgroundColor = 'white';
+            tempDiv.style.padding = '15px';
+            
+            // 生成与HTML文件相同的内容
+            tempDiv.innerHTML = generateHistoryHTML(record);
+            document.body.appendChild(tempDiv);
+            
+            // 使用html2canvas将HTML转换为Canvas
+            html2canvas(tempDiv, {
+                scale: 2, // 提高清晰度
+                useCORS: true, // 允许加载跨域图片
+                logging: false,
+                backgroundColor: '#ffffff',
+                windowWidth: 700, // 设置窗口宽度
+                windowHeight: 1000 // 设置窗口高度，确保所有内容都能被捕获
+            }).then(canvas => {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    
+                    // 计算PDF页面大小，确保内容在一页内显示
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgWidth = 210; // A4宽度（mm）
+                    const imgHeight = canvas.height * imgWidth / canvas.width;
+                    
+                    // 创建PDF文档，使用自动页面大小
+                    const doc = new jsPDF({
+                        orientation: imgHeight > 297 ? 'portrait' : 'portrait',
+                        unit: 'mm',
+                        format: [imgWidth, imgHeight] // 自定义页面大小，确保内容在一页内显示
+                    });
+                    
+                    // 添加图片到PDF
+                    doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                    
+                    // 保存PDF文件
+                    const fileName = `请假审批记录_${record.studentName}_${new Date(record.timestamp).toISOString().slice(0, 10)}.pdf`;
+                    
+                    // 先保存PDF到本地
+                    doc.save(fileName);
+                    
+                    // 延迟执行其他操作，确保PDF下载完成
+                    setTimeout(() => {
+                        try {
+                            // 上传PDF到飞书
+                            const pdfBlob = new Blob([doc.output()], { type: 'application/pdf' });
+                            uploadPDFToFeishu(pdfBlob, fileName)
+                                .then(fileToken => {
+                                    alert('审批结果已成功保存到飞书云文档！');
+                                })
+                                .catch(error => {
+                                    // 不显示错误提示，避免影响用户体验
+                                });
+                            
+                            // 自动发送邮件到班主任邮箱
+                            const subject = `请假审批记录 - ${record.studentName}`;
+                            const body = `尊敬的班主任：\n\n学生 ${record.studentName} 的请假审批已完成，请查收附件中的审批记录。\n\n审批时间：${new Date(record.timestamp).toLocaleString('zh-CN')}\n\n此致\n学生请假审批系统`;
+                            const mailtoLink = `mailto:357839808@qq.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                            window.open(mailtoLink);
+                            alert('请在邮件客户端中添加生成的PDF文件作为附件');
+                        } catch (error) {
+                            console.error('执行后续操作时出错:', error);
+                        }
+                    }, 2000);
+                } catch (error) {
+                    console.error('生成PDF文档时出错:', error);
+                    // 使用备用方法
+                    generatePDFTextOnly(record);
+                } finally {
+                    // 移除临时元素
+                    document.body.removeChild(tempDiv);
+                }
+            }).catch(error => {
+                console.error('html2canvas转换失败:', error);
+                // 如果html2canvas失败，使用备用方法
+                generatePDFTextOnly(record);
+            });
+        } catch (error) {
+            console.error('生成PDF时出错:', error);
+            // 使用备用方法
+            generatePDFTextOnly(record);
+        }
+    }
+    
+    // 备用PDF生成方法（纯文本）
+    function generatePDFTextOnly(record) {
+        const { jsPDF } = window.jspdf;
+        
+        // 计算文本高度，确定页面大小
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        
+        // 设置字体大小和样式
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        
+        // 添加标题
+        doc.text('学生请假审批记录', 105, 20, { align: 'center' });
+        
+        // 设置字体为正常大小
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        
+        // 添加学生信息
+        doc.text(`学生姓名: ${record.studentName}`, 20, 40);
+        
+        // 添加审批结果
+        doc.setFont('helvetica', 'bold');
+        doc.text('审批结果:', 20, 60);
+        doc.setFont('helvetica', 'normal');
+        
+        // 处理审批结果文本，确保它能正确显示在PDF中
+        const approvalLines = doc.splitTextToSize(record.approvalResult, 170);
+        doc.text(approvalLines, 20, 70);
+        
+        // 添加审批时间
+        const timeStr = new Date(record.timestamp).toLocaleString('zh-CN');
+        doc.setFont('helvetica', 'bold');
+        doc.text('审批时间:', 20, 90 + (approvalLines.length * 5));
+        doc.setFont('helvetica', 'normal');
+        doc.text(timeStr, 20, 100 + (approvalLines.length * 5));
+        
+        // 保存PDF文件
+        const fileName = `请假审批记录_${record.studentName}_${new Date(record.timestamp).toISOString().slice(0, 10)}.pdf`;
+        
+        // 先保存PDF到本地
+        doc.save(fileName);
+        
+        // 延迟执行其他操作，确保PDF下载完成
+        setTimeout(() => {
+            try {
+                // 上传PDF到飞书
+                const pdfBlob = new Blob([doc.output()], { type: 'application/pdf' });
+                uploadPDFToFeishu(pdfBlob, fileName)
+                    .then(fileToken => {
+                        alert('审批结果已成功保存到飞书云文档！');
+                    })
+                    .catch(error => {
+                        // 不显示错误提示，避免影响用户体验
+                    });
+                
+                // 自动发送邮件到班主任邮箱
+                const subject = `请假审批记录 - ${record.studentName}`;
+                const body = `尊敬的班主任：\n\n学生 ${record.studentName} 的请假审批已完成，请查收附件中的审批记录。\n\n审批时间：${new Date(record.timestamp).toLocaleString('zh-CN')}\n\n此致\n学生请假审批系统`;
+                const mailtoLink = `mailto:357839808@qq.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                window.open(mailtoLink);
+                alert('请在邮件客户端中添加生成的PDF文件作为附件');
+            } catch (error) {
+                console.error('执行后续操作时出错:', error);
+            }
+        }, 2000);
     }
     
     // 生成历史记录HTML内容
@@ -857,19 +1102,41 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .container { max-width: 800px; margin: 0 auto; }
-        h1 { color: #333; }
+        h1 { color: #333; font-size: 18px; margin-bottom: 10px; }
         .info { margin-bottom: 20px; }
-        .image-container { margin: 20px 0; }
-        img { max-width: 100%; height: auto; border: 1px solid #ddd; }
+        .student-name { font-size: 16px; margin-bottom: 10px; }
+        .approval-result {
+            border: 2px dashed #667eea;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .approval-result p { margin: 5px 0; }
+        .image-container {
+            margin: 20px 0;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        .image-container h2 {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>请假审批记录</h1>
         <div class="info">
-            <p><strong>学生姓名:</strong> ${record.studentName}</p>
-            <p><strong>审批结果:</strong> ${record.approvalResult}</p>
-            <p><strong>审批时间:</strong> ${new Date(record.timestamp).toLocaleString('zh-CN')}</p>
+            <p class="student-name"><strong>学生姓名:</strong> ${record.studentName}</p>
+            <div class="approval-result">
+                <p><strong>审批结果:</strong> ${record.approvalResult}</p>
+                <p><strong>审批时间:</strong> ${new Date(record.timestamp).toLocaleString('zh-CN')}</p>
+            </div>
         </div>
         <div class="image-container">
             <h2>请假截图</h2>
@@ -900,6 +1167,19 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+    
+    // 保存手动修改的识别文本
+    function saveTextEdit(type) {
+        if (type === 'leave') {
+            const editedText = document.getElementById('leaveTextEdit').value;
+            leaveRecognizedText = editedText;
+            alert('请假信息文本修改已保存');
+        } else if (type === 'parent') {
+            const editedText = document.getElementById('parentTextEdit').value;
+            parentRecognizedText = editedText;
+            alert('家长短信文本修改已保存');
+        }
     }
 
     // 动态刷新左上角学生信息显示
@@ -975,19 +1255,7 @@
     };
 
     // 测试飞书API连接
-    async function testFeishuConnection() {
-        try {
-            showLoading(true);
-            console.log('开始测试飞书API连接...');
-            await getFeishuAccessToken();
-            alert('飞书API连接测试成功！');
-        } catch (error) {
-            console.error('飞书API连接测试失败:', error);
-            alert(`飞书API连接测试失败: ${error.message}\n请检查以下几点:\n1. 网络连接是否正常\n2. App ID和App Secret是否正确\n3. 飞书开放平台是否已授权应用权限`);
-        } finally {
-            showLoading(false);
-        }
-    }
+
     
     // 上传识别
     async function processImage(file, type) {
@@ -1022,15 +1290,27 @@
                         leaveImageData = dataUrl; // 保存请假截图的dataURL
                         document.getElementById('leavePreviewImg').src = dataUrl;
                         document.getElementById('leavePreview').classList.add('active');
-                        // 隐藏识别结果
-                        document.getElementById('leaveText').style.display = 'none';
+                        // 显示识别结果并允许编辑
+                        const leaveTextEl = document.getElementById('leaveText');
+                        leaveTextEl.style.display = 'block';
+                        leaveTextEl.innerHTML = `
+                            <textarea id="leaveTextEdit">${text}</textarea>
+                            <button class="edit-text-btn" onclick="saveTextEdit('leave')">保存修改</button>
+                            <p style="font-size: 0.8em; color: #666; margin-top: 5px;">如果识别有误，请手动修改文本后保存</p>
+                        `;
                     } else {
                         parentRecognizedText = text;
                         parentImageData = dataUrl; // 保存家长短信截图的dataURL
                         document.getElementById('parentPreviewImg').src = dataUrl;
                         document.getElementById('parentPreview').classList.add('active');
-                        // 隐藏识别结果
-                        document.getElementById('parentText').style.display = 'none';
+                        // 显示识别结果并允许编辑
+                        const parentTextEl = document.getElementById('parentText');
+                        parentTextEl.style.display = 'block';
+                        parentTextEl.innerHTML = `
+                            <textarea id="parentTextEdit">${text}</textarea>
+                            <button class="edit-text-btn" onclick="saveTextEdit('parent')">保存修改</button>
+                            <p style="font-size: 0.8em; color: #666; margin-top: 5px;">如果识别有误，请手动修改文本后保存</p>
+                        `;
                     }
                 } catch(err) { alert('识别失败，请重试'); } finally { showLoading(false); }
             };
@@ -1067,14 +1347,14 @@
         let approvalResult = '';
         if(allPass) {
             resultCard.className = 'card result-card approved';
-            approvalResult = `${studentName}同学：\n班主任已同意你的请假申请。请按程序到【智慧国土App】办理请假手续，外出注意安全，按时返校和销假。\n审批时间：${timeStr}`;
+            approvalResult = `${studentName}同学：\n班主任已同意你的请假申请。请按程序到【智慧国土App】办理请假手续，外出注意安全，按时返校和销假。`;
             resultCard.innerHTML = `<div class="result-header"><div class="result-icon">✅</div><div class="result-title">批准</div></div>
             <p style="text-align: left; margin-left: 20px;">${studentName}同学：<br>&nbsp;&nbsp;&nbsp;&nbsp;班主任已同意你的请假申请。请按程序到【智慧国土App】办理请假手续，外出注意安全，按时返校和销假。</p>
             <p style="font-size: 0.9em; color: rgba(255, 255, 255, 0.8); margin-top: 10px;">审批时间：${timeStr}</p>`;
             if(currentSelectedStudent) currentSelectedStudent.status = '请假已批准';
         } else {
             resultCard.className = 'card result-card rejected';
-            approvalResult = `${studentName}同学，请假申请不通过，请与班主任直接沟通。\n审批时间：${timeStr}`;
+            approvalResult = `${studentName}同学，请假申请不通过，请与班主任直接沟通。`;
             resultCard.innerHTML = `<div class="result-header"><div class="result-icon">❌</div><div class="result-title">拒绝</div></div>
             <p style="text-align: left; margin-left: 20px;">${studentName}同学，请假申请不通过，请与班主任直接沟通。</p>
             <p style="font-size: 0.9em; color: rgba(255, 255, 255, 0.8); margin-top: 10px;">审批时间：${timeStr}</p>`;
@@ -1083,10 +1363,12 @@
         
         // 保存审批历史记录
         if (leaveImageData && parentImageData) {
-            saveApprovalHistory(studentName, approvalResult, leaveImageData, parentImageData)
-                .catch(error => {
-                    console.error('保存审批历史记录失败:', error);
-                });
+            try {
+                saveApprovalHistory(studentName, approvalResult, leaveImageData, parentImageData);
+            } catch (error) {
+                console.error('保存审批历史记录失败:', error);
+                alert('保存审批历史记录失败，请重试');
+            }
         }
     }
 
@@ -1164,8 +1446,9 @@
         if (role === 'student') {
             const name = document.getElementById('studentNameLogin').value.trim();
             const id = document.getElementById('studentIdLogin').value.trim();
-            const stu = userDatabase.students.find(s => s.id === id && s.name === name);
-            if (!stu) { alert('学号或姓名错误'); return; }
+            const pwd = document.getElementById('studentPasswordLogin').value;
+            const stu = userDatabase.students.find(s => s.id === id && s.name === name && s.password === pwd);
+            if (!stu) { alert('学号、姓名或密码错误'); return; }
             currentUserRole = 'student'; currentUser = stu;
         } else if (role === 'teacher' || role === 'headTeacher') {
             const id = document.getElementById('teacherIdLogin').value.trim();
@@ -1195,23 +1478,34 @@
             let buttons = `<button class="btn" id="changePwdBtn">修改密码</button>`;
             if (currentUserRole === 'headTeacher' || currentUserRole === 'admin') {
                 buttons += `<button class="btn" id="leaveStatusBtn">请假状态</button>`;
-                buttons += `<button class="btn" id="testFeishuBtn" style="background:#17a2b8;">测试飞书连接</button>`;
+
             }
             if (currentUserRole === 'admin') {
                 buttons += `<button class="btn" id="userManagementBtn">用户管理</button>`;
             }
             buttons += `<button class="btn" id="logoutBtn">退出登录</button>`;
-            container.innerHTML = `<span>${roleText} · ${currentUser.name}</span>${buttons}`;
+            buttons += `<button class="btn" id="closePageBtn" style="background:#dc3545; margin-left: 10px;">🔒 关闭网页</button>`;
+            container.innerHTML = `<span>${roleText} · ${currentUser.name}</span>${buttons}<div style="margin-top: 5px; font-weight: bold; color: red; font-size: 12px;">申请成功后请务必关闭网页！</div>`;
             document.getElementById('changePwdBtn')?.addEventListener('click', () => openModal('changePassword'));
             document.getElementById('leaveStatusBtn')?.addEventListener('click', () => openModal('leaveStatus'));
-            document.getElementById('testFeishuBtn')?.addEventListener('click', testFeishuConnection);
+
             document.getElementById('userManagementBtn')?.addEventListener('click', () => openModal('userManagement'));
             document.getElementById('logoutBtn')?.addEventListener('click', () => { currentUserRole = null; currentUser = null; updateUserInfoDisplay(); alert('已退出'); });
+            document.getElementById('closePageBtn')?.addEventListener('click', () => {
+                if (confirm('确定要关闭网页吗？')) {
+                    window.close();
+                }
+            });
             const batchBtn = document.getElementById('batchAddStudentBtn');
             if (batchBtn) batchBtn.style.display = (currentUserRole === 'headTeacher' || currentUserRole === 'admin') ? 'inline-block' : 'none';
         } else {
-            container.innerHTML = `<span>访客</span><button class="btn" id="loginBtnHeader">登录</button>`;
+            container.innerHTML = `<span>访客</span><button class="btn" id="loginBtnHeader">登录</button><button class="btn" id="closePageBtn" style="background:#dc3545; margin-left: 10px;">🔒 关闭网页</button><div style="margin-top: 5px; font-weight: bold; color: red; font-size: 12px;">申请成功后请务必关闭网页！</div>`;
             document.getElementById('loginBtnHeader')?.addEventListener('click', () => openModal('login'));
+            document.getElementById('closePageBtn')?.addEventListener('click', () => {
+                if (confirm('确定要关闭网页吗？')) {
+                    window.close();
+                }
+            });
         }
     }
     
@@ -1459,6 +1753,7 @@
     document.getElementById('parentFile').addEventListener('change', (e) => { if(e.target.files[0]) processImage(e.target.files[0], 'parent'); });
     document.getElementById('submitBtn').addEventListener('click', submitApproval);
     document.getElementById('batchAddStudentBtn')?.addEventListener('click', () => openModal('batchStudent'));
+
     document.getElementById('downloadStudentTemplateBtn')?.addEventListener('click', downloadStudentExcelTemplate);
     document.getElementById('confirmBatchAddBtn')?.addEventListener('click', handleBatchImport);
     ['leaveUpload','parentUpload'].forEach(id => {
